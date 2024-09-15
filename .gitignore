@@ -1,10 +1,1 @@
-
-
-pyvenv.cfg
-bin
-lib
-lib64
-share
-./app/__pychache__
-venv
 env

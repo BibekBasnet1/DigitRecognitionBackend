@@ -1,23 +1,10 @@
-# FastAPI framework
-fastapi==0.103.1
-
-# ASGI server for serving FastAPI apps
-uvicorn[standard]==0.23.1
-
-# PyTorch for deep learning
-torch==2.0.1
-
-# Pillow for image processing
-pillow==10.0.0
-
-# Numpy for numerical computations
-numpy==1.25.2
-
-# Pandas for data manipulation
-pandas==2.1.0
-
-# CORS support for FastAPI
-fastapi[all]==0.103.1
-
-# Optional: Pydantic for advanced data validation
-pydantic==2.4.1
+numpy
+pandas
+fastapi
+uvicorn[standard]
+torch
+pillow
+sqlalchemy
+alembic
+python-dotenv
+pydantic-settings
