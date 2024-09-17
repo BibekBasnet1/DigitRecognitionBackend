@@ -1,5 +1,9 @@
-from sqlalchemy import Column, Integer, String,DateTime
-from src.core.config import Base
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
+import datetime
+
+Base = declarative_base()
 
 class User(Base):
     __tablename__ = "users"
@@ -7,12 +11,6 @@ class User(Base):
     name = Column(String, unique=True, index=True)
     email = Column(String, unique=True, index=True)
     profile_picture = Column(String)
-    created_at = DateTime()
-    last_login = DateTime()
-
-
-
-
-
-
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    last_login = Column(DateTime, nullable=True)
 

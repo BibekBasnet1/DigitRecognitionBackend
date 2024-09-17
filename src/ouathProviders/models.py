@@ -1,9 +1,7 @@
 
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, TIMESTAMP
+from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
 from src.core.config import Base
-
 
 class OAuthProvider(Base):
     __tablename__ = "oauth_providers"
