@@ -8,3 +8,5 @@ sqlalchemy
 alembic
 python-dotenv
 pydantic-settings
+torchvision
+python-multipart
