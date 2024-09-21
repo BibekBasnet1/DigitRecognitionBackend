@@ -6,7 +6,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Load the trained model and move it to the appropriate device
 model = DigitCNN().to(device)  # Make sure to initialize your model here
-model.load_state_dict(torch.load('third_model.pth'))  # Load the trained model state
+model.load_state_dict(torch.load('best_model.pth'))  # Load the trained model state
 
 def test(model, test_loader, device):
     model.eval()  

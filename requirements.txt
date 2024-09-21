@@ -10,3 +10,9 @@ python-dotenv
 pydantic-settings
 torchvision
 python-multipart
+authlib
+httpx
+python-jose
+itsdangerous
+passlib
+pydantic[email]

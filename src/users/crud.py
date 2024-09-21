@@ -1,3 +1,4 @@
+from fastapi import HTTPException
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker,Session
 from sqlalchemy.future import select
@@ -10,12 +11,18 @@ engine = create_engine(DATABASE_URL, echo=True)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+
 def create_user(db: Session, user: UserCreate):
+    existing_user = db.query(User).filter(User.email == user.email).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
     db_user = User(**user.dict())
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
     return db_user
+
 
 def get_user_by_email(db: Session, email: str):
     stmt = select(User).filter(User.email == email)
