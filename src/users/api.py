@@ -106,30 +106,45 @@ async def login(request: Request):
 @router.get("/auth")
 async def auth_google(request: Request, db: Session = Depends(get_db)):
     token = await oauth.google.authorize_access_token(request)
-    
     user_info = token.get('userinfo')
 
     if user_info:
         user_email = user_info.get("email")
 
-        if user_email and is_email_registered(user_email, db):
-            user = db.query(User).filter(User.email == user_email).first()
-            if not user:
-                user = User(
-                    name=user_info.get("name"),
-                    email=user_email,
-                    profile_picture=user_info.get("picture")
-                )
-                db.add(user)
-                db.commit()
-                db.refresh(user)
+        # Check if the user already exists in the database
+        existing_user = db.query(User).filter(User.email == user_email).first()
 
-            access_token = create_token(user_email)
+        if existing_user:
+            # User exists, return access token and user info
+            return {
+                "access_token": create_token(existing_user.email),
+                "user": {
+                    "id": existing_user.id,
+                    "name": existing_user.name,
+                    "email": existing_user.email,
+                    "profile_picture": existing_user.profile_picture,
+                    "created_at": existing_user.created_at,
+                    "last_login": existing_user.last_login
+                }
+            }
+        else:
+            new_user = User(
+                name=user_info.get("name"),
+                email=user_email,  
+                profile_picture=user_info.get("picture"),
+                created_at=datetime.utcnow(),
+                last_login=datetime.utcnow()
+            )
+            db.add(new_user)
+            db.commit()
+            db.refresh(new_user)
 
-            frontend_redirect_url = f"http://localhost:5173/login?access_token={access_token}&name={user_info.get('name')}&email={user_email}&profile_picture={user_info.get('picture')}"
+            access_token = create_token(new_user.email)  
+
+            frontend_redirect_url = f"http://localhost:5173/login?access_token={access_token}&name={new_user.name}&email={new_user.email}&profile_picture={new_user.profile_picture}"
             return RedirectResponse(url=frontend_redirect_url)
 
-    raise HTTPException(status_code=400, detail="User not found or not registered")
+    raise HTTPException(status_code=401, detail="User not found or not registered")
 
 
 
@@ -165,24 +180,6 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
-@router.post("/register", response_model=UserInDB)
-def register_user(user: UserCreate, db: Session = Depends(get_db)):
-    hashed_password = hash_password(user.password)
-    
-    db_user = User(
-        email=user.email,
-        name=user.name,
-        password=hashed_password,
-        profile_picture=user.profile_picture
-    )
-    
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    
-    return db_user
-
-
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
@@ -190,28 +187,65 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 @router.post("/login")
 def login(user: UserLogin, db: Session = Depends(get_db)):
-    # Retrieve the user from the database
+    
     db_user = db.query(User).filter(User.email == user.email).first()
     
-    # Check if the user exists and the password is correct
     if not db_user or not verify_password(user.password, db_user.password):
         raise HTTPException(status_code=400, detail="Invalid email or password")
 
-    # Create a token for the user
     access_token = create_token(db_user.email)
     
-    # Return the access token and user details (excluding password)
     return {
         "access_token": access_token,
         "user": {
-            "id": db_user.id,  # Include user ID for better reference
+            "id": db_user.id,  
             "name": db_user.name,
             "email": db_user.email,
             "profile_picture": db_user.profile_picture,
-            "created_at": db_user.created_at,  # Optional, if needed
-            "last_login": db_user.last_login,  # Optional, if needed
+            "created_at": db_user.created_at,  
+            "last_login": db_user.last_login,  
         }
     }
+
+@router.post("/register")
+def create_user(user: UserCreate, db: Session = Depends(get_db)):
+
+    # first check if the user already exists 
+    user_exists = db.query(User).filter(User.email == user.email).first()
+    
+    if user_exists:
+        return {"error": "User already exists"}
+    
+    hashed_password = hash_password(user.password)
+    
+    db_user = User(
+        email=user.email,
+        name=user.name,
+        password=hashed_password,
+        profile_picture=user.profile_picture,
+        created_at=datetime.utcnow(),
+        last_login=datetime.utcnow()
+    )
+    
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    
+    access_token = create_token(db_user.email)
+
+    return {
+        "access_token": access_token,
+        "user": {
+            "id": db_user.id,
+            "name": db_user.name,
+            "email": db_user.email,
+            "profile_picture": db_user.profile_picture,
+            "created_at": db_user.created_at,
+            "last_login": db_user.last_login,
+        }
+    }
+
+    
 
 @router.get("/users/me", response_model=UserInDB)
 def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
@@ -225,10 +259,8 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
 
 @router.get("/users", response_model=List[UserResponse])
 def get_all_users(db: Session = Depends(get_db)):
-    users = db.query(User).all()  # Retrieve all users from the database
+    users = db.query(User).all()  
     return users
-
-
 
 
 @router.post("/users", response_model=UserInDB)

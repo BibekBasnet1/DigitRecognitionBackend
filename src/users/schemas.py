@@ -16,7 +16,11 @@ class UserInDB(UserBase):
         orm_mode = True
 
 class UserCreate(UserBase):
+    email: EmailStr
     password: str  
+
+    class Config:
+        orm_mode = True
 
 class UserResponse(BaseModel):
     id: int
