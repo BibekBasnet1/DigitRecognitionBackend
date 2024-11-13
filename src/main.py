@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from src.users.api import router as user_router
+from src.digitPredictions.api import router as digit_predictions_router
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from src.core.config import settings
@@ -25,3 +26,4 @@ if not SECRET_KEY:
 app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
 
 app.include_router(user_router, prefix="/api")
+app.include_router(digit_predictions_router, prefix="/api")

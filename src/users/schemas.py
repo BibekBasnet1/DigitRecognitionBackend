@@ -16,7 +16,7 @@ class UserInDB(UserBase):
         orm_mode = True
 
 class UserCreate(UserBase):
-    email: EmailStr
+    email: str
     password: str  
 
     class Config:

@@ -11,8 +11,9 @@ from starlette.responses import JSONResponse,RedirectResponse
 from sqlalchemy.orm import Session
 from jose import JWTError, jwt
 from typing import List
+from pydantic import EmailStr
 from passlib.context import CryptContext
-
+import re
 
 from src.core.database import get_db
 from src.users.models import User
@@ -111,22 +112,12 @@ async def auth_google(request: Request, db: Session = Depends(get_db)):
     if user_info:
         user_email = user_info.get("email")
 
-        # Check if the user already exists in the database
         existing_user = db.query(User).filter(User.email == user_email).first()
 
         if existing_user:
-            # User exists, return access token and user info
-            return {
-                "access_token": create_token(existing_user.email),
-                "user": {
-                    "id": existing_user.id,
-                    "name": existing_user.name,
-                    "email": existing_user.email,
-                    "profile_picture": existing_user.profile_picture,
-                    "created_at": existing_user.created_at,
-                    "last_login": existing_user.last_login
-                }
-            }
+            access_token = create_token(existing_user.email)
+            frontend_redirect_url = f"http://localhost:5173/login?access_token={access_token}&name={existing_user.name}&email={existing_user.email}&profile_picture={existing_user.profile_picture}"
+            return RedirectResponse(url=frontend_redirect_url)
         else:
             new_user = User(
                 name=user_info.get("name"),
@@ -207,15 +198,68 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
         }
     }
 
+
+def validate_email(email: str):
+    email_regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+    
+    if re.match(email_regex, email):
+        return {
+            'status': True,
+            'message': 'Valid Email Format'
+        }
+    else:
+        return {
+            'status': False,
+            'message': 'Invalid Email Format'
+        }
+
+def validate_password(password: str):
+    if len(password) < 8:
+        return {
+            'status': False,
+            'message': 'Password must be at least 8 characters long'
+        }
+    if not re.search(r"[A-Z]", password):
+        return {
+            'status': False,
+            'message': 'Password must contain at least one uppercase letter'
+        }
+    if not re.search(r"[a-z]", password):
+        return {
+            'status': False,
+            'message': 'Password must contain at least one lowercase letter'
+        }
+    if not re.search(r"\d", password):
+        return {
+            'status': False,
+            'message': 'Password must contain at least one number'
+        }
+    if not re.search(r"[@$!%*?&#]", password):
+        return {
+            'status': False,
+            'message': 'Password must contain at least one special character'
+        }
+    
+    return {
+        'status': True,
+        'message': 'Password is valid'
+    }
+
 @router.post("/register")
 def create_user(user: UserCreate, db: Session = Depends(get_db)):
 
-    # first check if the user already exists 
+    email_validation = validate_email(user.email)
+    if not email_validation['status']:
+        raise HTTPException(status_code=400, detail=email_validation['message'])
+
+    password_validation = validate_password(user.password)
+    if not password_validation['status']:
+        raise HTTPException(status_code=400, detail=password_validation['message'])
+
     user_exists = db.query(User).filter(User.email == user.email).first()
-    
     if user_exists:
-        return {"error": "User already exists"}
-    
+        raise HTTPException(status_code=400, detail="User already exists")
+
     hashed_password = hash_password(user.password)
     
     db_user = User(
@@ -245,9 +289,7 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
         }
     }
 
-    
-
-@router.get("/users/me", response_model=UserInDB)
+@router.get("/users/me", response_model=UserInDB, tags=["Users"])
 def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
     email = decode_token(token)  
     db_user = db.query(User).filter(User.email == email).first()
@@ -257,18 +299,18 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
     
     return db_user
 
-@router.get("/users", response_model=List[UserResponse])
+@router.get("/users", response_model=List[UserResponse], tags=["Users"])
 def get_all_users(db: Session = Depends(get_db)):
     users = db.query(User).all()  
     return users
 
 
-@router.post("/users", response_model=UserInDB)
+@router.post("/users", response_model=UserInDB,tags=["Users"])
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
     """Registers a new user."""
     return create_user(db, user)
 
-@router.get("/users/{email}", response_model=UserInDB)
+@router.get("/users/{email}", response_model=UserInDB,tags=["Users"])
 def read_user(email: str, db: Session = Depends(get_db)):
     """Fetches user by email."""
     user = get_user_by_email(db, email)
@@ -279,7 +321,7 @@ def read_user(email: str, db: Session = Depends(get_db)):
 # Load the trained model for digit prediction
 model = load_trained_model()
 
-@router.post("/users/predict-digit/")
+@router.post("/users/predict-digit/", tags=["Predict"])
 def predict_digit(file: UploadFile = File(...)):
     """Predicts a digit from the uploaded image."""
     file_location = f"temp/{file.filename}"

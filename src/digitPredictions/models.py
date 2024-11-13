@@ -15,5 +15,4 @@ class DigitPrediction(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     status = Column(Integer, default=0)
 
-    # Use a string to reference User
     user = relationship("User", back_populates="predictions")

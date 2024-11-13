@@ -1,18 +1,29 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from .schemas import PredictionBase, PredictionInDB 
+from .schemas import PredictionBase, PredictionInDB
 from src.core.database import get_db
+from src.digitPredictions.models import DigitPrediction  
 
 router = APIRouter()
 
-# get all the predictions that exists
-@router.get('/digit_predictions')
-def get_digit_predictions(digit_predictions: PredictionInDB , db: Session = Depends(get_db)):
-    return db.query(digit_predictions).all()
+@router.get('/digit_predictions', tags=["digit_predictions"])
+def get_digit_predictions(db: Session = Depends(get_db)):
+    predictions = db.query(DigitPrediction).all()  
+    return {
+        "status" : "success",
+        "data" : predictions
+    }
 
-# get predictions based on the users 
-@router.get('/digit_predictions/{user_id}')
+@router.get('/digit_predictions/{user_id}', tags=["digit_predictions"])
 def get_digit_predictions_by_user(user_id: int, db: Session = Depends(get_db)):
-    return db.query(PredictionInDB).filter(PredictionInDB.user_id == user_id).all()
-
-
+    predictions = db.query(DigitPrediction).filter(DigitPrediction.user_id == user_id).all() 
+    if not predictions:
+        return {
+            "status" : "error",
+            "message" : "No predictions found for this user",
+            "data" : []
+        }
+    return {
+        "status" : "success",
+        "data" : predictions
+    }  

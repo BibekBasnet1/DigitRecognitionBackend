@@ -36,10 +36,3 @@ for epoch in range(1, num_epochs + 1):
 
     print(f'Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Val Acc: {val_accuracy:.2f}')
 
-
-
-# Validation Loader: Make sure you have a function to load the validation dataset (load_validation_dataset).
-# Learning Rate Scheduler: A learning rate scheduler is set to reduce the learning rate every 10 epochs.
-# Best Model Checkpointing: The model is saved when the validation loss improves.
-# Print Messages: Added a message when the model improves and is saved for better tracking.
-# Modular Imports: Ensure you have the necessary imports for evaluate from utils.

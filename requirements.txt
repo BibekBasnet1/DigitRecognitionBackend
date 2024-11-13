@@ -16,3 +16,4 @@ python-jose
 itsdangerous
 passlib
 pydantic[email]
+scikit-learn
