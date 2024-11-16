@@ -48,3 +48,28 @@ def validate(model, val_loader, criterion, device):
     print(f'Validation Loss: {val_loss:.4f}, Accuracy: {accuracy:.2f}%')
     
     return val_loss, accuracy
+
+
+
+def evaluate(model, data_loader, criterion, device):
+    model.eval()  # Set the model to evaluation mode
+    running_loss = 0.0
+    correct = 0
+    total = 0
+
+    with torch.no_grad():  # Disable gradient calculation
+        for images, labels in data_loader:
+            images, labels = images.to(device), labels.to(device)  # Move data to the specified device
+            
+            outputs = model(images)  # Forward pass
+            loss = criterion(outputs, labels)  # Compute the loss
+            
+            running_loss += loss.item() * images.size(0)  # Accumulate loss
+            _, predicted = torch.max(outputs, 1)  # Get the predicted class
+            correct += (predicted == labels).sum().item()  # Count correct predictions
+            total += labels.size(0)  # Count total samples
+
+    avg_loss = running_loss / total  # Average loss
+    accuracy = correct / total  # Accuracy
+
+    return avg_loss, accuracy
